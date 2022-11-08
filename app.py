@@ -1,5 +1,5 @@
 import pandas as pd
-from bs4 import BeautifulSoup
+import json
 import requests as r
 import streamlit as st
 
@@ -7,30 +7,60 @@ st.markdown('<h1 style="background-color: gainsboro; padding-left: 10px; padding
 query = st.text_input('', help='Enter the ingredients and hit Enter/Return')
 query = query.replace(" ", "+") #replacing the spaces in query result with +
 
+def get_query(i1, i2):
+    host       = "localhost"
+    port       = "8983"
+    core       = "food"
+    qt         = "select"
+    url        = 'http://' + host + ':' + port + '/solr/' + core + '/' + qt + '?'
+
+
+    q          = "q=ingredients%3A" + i1
+    wt         = "wt=json"
+    #wt        = "wt=python"
+    rows       = "rows=10"
+    indent     = "indent=true"
+    if i2 != None:
+        op         = "q.op=AND"
+        fq         = "fq=ingredients%3A" + i2
+        params     = [fq, indent, op, q, wt]
+    else:
+        params     = [indent, q, wt]
+
+    p          = "&".join(params)
+
+    return url+p
+
+
+
 if query: #Activates the code below on hitting Enter/Return in the search textbox
-    try:#Exception handling 
-        req = r.get(f"https://www.bing.com/search?q={query}",
+    try:#Exception handling
+        ingredients = query.split(', ')
+        if len(ingredients) == 0:
+            raise Exception("No result")
+        elif len(ingredients) == 1:
+            i1 = ingredients[0]
+            i2 = None
+        else:
+            i1, i2 = ingredients[:2]
+
+        req = r.get(get_query(i1, i2),
                     headers = {"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36"})
         result_str = '<html><table style="border: none;">' #Initializing the HTML code for displaying search results
         
         if req.status_code == 200: #Status code 200 indicates a successful request
-            bs = BeautifulSoup(req.content, features="html.parser") #converting the content/text returned by request to a BeautifulSoup object
-            search_result = bs.find_all("li", class_="b_algo") #'b_algo' is the class of the list object which represents a single result
-            search_result = [str(i).replace("<strong>","") for i in search_result] #removing the <strong> tag
-            search_result = [str(i).replace("</strong>","") for i in search_result] #removing the </strong> tag
+            js = json.loads(req.content)
+            search_result = js['response']['docs']
             result_df = pd.DataFrame() #Initializing the data frame that stores the results
             
             for n,i in enumerate(search_result): #iterating through the search results
-                individual_search_result = BeautifulSoup(i, features="html.parser") #converting individual search result into a BeautifulSoup object
-                h2 = individual_search_result.find('h2') #Finding the title of the individual search result
-                href = h2.find('a').get('href') #title's URL of the individual search result
-                cite = f'{href[:50]}...' if len(href) >= 50 else href # cite with first 20 chars of the URL
-                url_txt = h2.find('a').text #title's text of the individual search result
-                #In a few cases few individual search results doesn't have a description. In such cases the description would be blank
-                description = "" if individual_search_result.find('p') is None else individual_search_result.find('p').text
-                #Appending the result data frame after processing each individual search result
+                url_txt = i['title'][0]
+                href = i['url'][0]
+                description = " ".join(i['ingredients'])
+                cite = "Calo: {} ".format(i['calo'][0])
+
                 result_df = result_df.append(pd.DataFrame({"Title": url_txt, "URL": href, "Description": description}, index=[n]))
-                count_str = f'<b style="font-size:20px;">Bing Search returned {len(result_df)} results</b>'
+                count_str = f'<b style="font-size:20px;">Food Search returned {len(result_df)} results</b>'
                 ########################################################
                 ######### HTML code to display search results ##########
                 ########################################################
