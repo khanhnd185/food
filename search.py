@@ -8,8 +8,6 @@ PORT = "8983"
 CORE = "food"
 
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
-logger.addHandler(logging.FileHandler('train.log'))
 logger.setLevel(level=logging.DEBUG)
 
 def SendRequestToSolr(q, s):
@@ -21,9 +19,7 @@ def SendRequestToSolr(q, s):
     start      = "start={}".format(s)
     indent     = "indent=true"
     params     = [indent, q, wt, start]
-
     p          = "&".join(params)
-
     ret = r.get(url+p, headers = {"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36"})
 
     if ret.status_code == 200:
@@ -58,7 +54,6 @@ def MergeDict(d1: dict, d2: dict):
     for k, v in d1.items():
         if k in d2.keys():
             d[k] = v
-
 
     logger.info('Get {} merge from {} and {}'.format(len(d.keys()), len(d1.keys()), len(d2.keys())))
 
