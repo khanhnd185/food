@@ -1,7 +1,7 @@
 import json
 from tracemalloc import start
 import requests as r
-import argparse, logging
+import logging
 
 HOST = "localhost"
 PORT = "8983"
