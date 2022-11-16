@@ -1,59 +1,20 @@
 import pandas as pd
-import json
-import requests as r
 import streamlit as st
+from search import GetFoodFromIngredients
 
 st.markdown('<h1 style="background-color: gainsboro; padding-left: 10px; padding-bottom: 20px;">Food Search Engine</h1>', unsafe_allow_html=True)
 query = st.text_input('', help='Enter the ingredients and hit Enter/Return')
-query = query.replace(" ", "+") #replacing the spaces in query result with +
-
-def get_query(i1, i2):
-    host       = "localhost"
-    port       = "8983"
-    core       = "food"
-    qt         = "select"
-    url        = 'http://' + host + ':' + port + '/solr/' + core + '/' + qt + '?'
-
-
-    q          = "q=ingredients%3A" + i1
-    wt         = "wt=json"
-    #wt        = "wt=python"
-    rows       = "rows=10"
-    indent     = "indent=true"
-    if i2 != None:
-        op         = "q.op=AND"
-        fq         = "fq=ingredients%3A" + i2
-        params     = [fq, indent, op, q, wt]
-    else:
-        params     = [indent, q, wt]
-
-    p          = "&".join(params)
-
-    return url+p
-
 
 
 if query: #Activates the code below on hitting Enter/Return in the search textbox
     try:#Exception handling
-        ingredients = query.split(', ')
-        if len(ingredients) == 0:
-            raise Exception("No result")
-        elif len(ingredients) == 1:
-            i1 = ingredients[0]
-            i2 = None
-        else:
-            i1, i2 = ingredients[:2]
-
-        req = r.get(get_query(i1, i2),
-                    headers = {"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36"})
+        recipes = GetFoodFromIngredients(query)
         result_str = '<html><table style="border: none;">' #Initializing the HTML code for displaying search results
         
-        if req.status_code == 200: #Status code 200 indicates a successful request
-            js = json.loads(req.content)
-            search_result = js['response']['docs']
+        if len(recipes) > 0: #Status code 200 indicates a successful request
             result_df = pd.DataFrame() #Initializing the data frame that stores the results
             
-            for n,i in enumerate(search_result): #iterating through the search results
+            for n,i in enumerate(recipes): #iterating through the search results
                 url_txt = i['title'][0]
                 href = i['url'][0]
                 description = " ".join(i['ingredients'])
