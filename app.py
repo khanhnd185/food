@@ -5,7 +5,18 @@ from anticancer import GetHealthyScore
 
 st.markdown('<h1 style="background-color: gainsboro; padding-left: 10px; padding-bottom: 20px;">Food Search Engine</h1>', unsafe_allow_html=True)
 query = st.text_input('', help='Enter the ingredients and hit Enter/Return')
-anticancer = st.checkbox('Anticancer Knowledge')
+
+option = st.selectbox(
+    'Sorted by?',
+    ("User rating", 'Anticancer score', 'Calories', 'Fat', "Protein"))
+
+sorted_by = {
+    'Anticancer score':'anticancer',
+    'Calories': 'calo',
+    'Fat': 'fat',
+    'User rating': 'rate',
+    'Protein': 'prot'
+}[option]
 
 if query:
     try:
@@ -15,25 +26,26 @@ if query:
         if len(recipes) > 0:
             scores = []
 
-            if anticancer:
-                for r in recipes:
+            for r in recipes:
+                if sorted_by == 'anticancer':
                     score = GetHealthyScore(r['ingredients'])
-                    r['score'] = score
-                    scores.append(score)
+                else:
+                    ## Exception
+                    if sorted_by not in r.keys():
+                        r[sorted_by] = [4.0]
 
-                index = sorted(range(len(scores)), reverse=True, key=lambda k: scores[k])
-            else:
-                index = range(len(recipes))
+                    score = r[sorted_by][0]
+                scores.append(score)
+
+            index = sorted(range(len(scores)), reverse=True, key=lambda k: scores[k])
             
             for n in index:
                 i = recipes[n]
                 url_txt = i['title'][0]
                 href = i['url'][0]
                 description = " ".join(i['ingredients'])
-                cite = "Calo: {} ".format(i['calo'][0])
-
                 score = GetHealthyScore(i['ingredients'])
-                cite = "Score: {} ".format(score)
+                cite = "{}: {} ".format(option, scores[n])
 
                 result_str += f'<tr style="border: none;"><h3><a href="{href}" target="_blank">{url_txt}</a></h3></tr>'+\
                 f'<tr style="border: none;"><strong style="color:green;">{cite}</strong></tr>'+\
@@ -45,7 +57,7 @@ if query:
 
         else:
             result_str = '<html></html>'
-            count_str = '<b style="font-size:20px;">Looks like an error!!</b>'
+            count_str = '<b style="font-size:20px;">There is no result for the input!</b>'
 
     except:
         result_str = '<html></html>'
@@ -53,4 +65,3 @@ if query:
     
     st.markdown(f'{count_str}', unsafe_allow_html=True)
     st.markdown(f'{result_str}', unsafe_allow_html=True)
-    st.markdown('<h3>Data Frame of the above search result</h3>', unsafe_allow_html=True)
